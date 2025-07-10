@@ -8,6 +8,7 @@ import numpy as np
 import os
 import torch
 from torchvision.utils import make_grid
+import odl
 
 
 def img2tensor(imgs, bgr2rgb=True, float32=True):
@@ -182,3 +183,41 @@ def crop_border(imgs, crop_border):
         else:
             return imgs[crop_border:-crop_border, crop_border:-crop_border,
                         ...]
+
+
+def compute_sinogram(img_size=256, angle=360):
+
+    # 1. reconstruction space
+    spacing = 0.16  
+    imPixScale = spacing
+
+    min_pt = [-(img_size / 2) * imPixScale, -(img_size / 2) * imPixScale]
+    max_pt = [(img_size / 2) * imPixScale, (img_size / 2) * imPixScale]
+
+    reco_space = odl.uniform_discr(min_pt, max_pt, [img_size,img_size], dtype='float32')
+
+    # 2. angle partition
+    angle_partition = odl.uniform_partition(0, 2 * np.pi, angle)
+
+    # 3. detector partition
+    su = 768 * 1.0  
+    nu_h = 768      
+
+    detector_partition = odl.uniform_partition(-(su / 2.0), (su / 2.0), nu_h)
+
+    # 4. FanBeamGeometry
+    src_radius = 1075  
+    det_radius = 1075  
+
+    geometry = odl.tomo.FanBeamGeometry(
+        angle_partition,
+        detector_partition,
+        src_radius=src_radius,
+        det_radius=det_radius
+        )
+
+    # 5. Ray Transform
+    ray_transform = odl.tomo.RayTransform(reco_space, geometry, impl='astra_cuda')
+    fbp_op = odl.tomo.fbp_op(ray_transform)
+
+    return ray_transform, fbp_op
