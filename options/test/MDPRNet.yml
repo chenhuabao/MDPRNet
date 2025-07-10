@@ -1,0 +1,61 @@
+# ------------------------------------------------------------------------
+# Modified from NAFNet (https://github.com/megvii-research/NAFNet)
+# ------------------------------------------------------------------------
+
+# general settings
+name: MDPRNet-AAPM_144
+model_type: ImageRestorationModel
+scale: 1
+num_gpu: 1 # set num_gpu: 0 for cpu mode
+manual_seed: 10
+
+# dataset and data loader settings
+datasets:
+
+  val:
+    name: AAPM_val
+    type: PairedImageDataset
+
+    dataroot_gt: ./datasets/val_18/HR_CT_val.lmdb
+    dataroot_lq: ./datasets/val_144/LR_CT_val_144.lmdb
+
+    io_backend:
+      type: lmdb
+
+# network structures
+network_g:
+  type: MDPRNet
+  enc_blk_nums0: [4, 4, 8]
+  enc_blk_nums1: [4, 4, 8]
+  middle_blk_num0: 0
+  middle_blk_num1: 0
+  dec_blk_nums0: [2, 2, 2]
+  dec_blk_nums1: [2, 2, 2]
+  num_cab: 2
+
+# path
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+
+# validation settings
+val:
+  save_img: true
+  grids: false
+  use_image: false
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
